@@ -1,0 +1,48 @@
+nginx:
+    build: "./nginx"
+    ports:
+      - "80:80"
+    links:
+      - "php53"
+      - "php54"
+      - "php56"
+    volumes:
+      - /Users/lxpfigo/htdocs:/opt/htdocs
+
+php53:
+    build: "./php53"
+    ports:
+      - "9000:9000"
+    links:
+      - "mysql"
+    volumes:
+      - /Users/lxpfigo/htdocs:/opt/htdocs
+php54:
+    build: "./php54"
+    ports:
+      - "9001:9000"
+    links:
+      - "mysql"
+      - "redis"
+    volumes:
+      - /Users/lxpfigo/htdocs:/opt/htdocs
+php56:
+    build: "./php56"
+    ports:
+      - "9002:9000"
+    links:
+      - "mysql"
+    volumes:
+      - /Users/lxpfigo/htdocs:/opt/htdocs
+mysql:
+    build: "./mysql"
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - ~/opt/data/mysql:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+redis:
+    build: ./redis
+    ports:
+      - "6379:6379"
