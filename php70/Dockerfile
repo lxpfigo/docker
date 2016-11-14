@@ -1,7 +1,6 @@
-FROM php:5.6-fpm
+FROM php:7.0-fpm
 
 MAINTAINER Macken <rystlee100@gmail.com>
-
 
 #--------------------------------------------------------------------------
 # Mandatory Software's Installation
@@ -10,6 +9,7 @@ MAINTAINER Macken <rystlee100@gmail.com>
 # Installing tools and PHP extentions using "apt", "docker-php", "pecl",
 # Install "curl", "libmemcached-dev", "libpq-dev", "libjpeg-dev",
 #         "libpng12-dev", "libfreetype6-dev", "libssl-dev", "libmcrypt-dev",
+
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         curl \
@@ -26,32 +26,22 @@ RUN apt-get update && \
 # Install the PHP mcrypt extention
 RUN docker-php-ext-install mcrypt
 
-# Install the PHP mysql extention
-RUN docker-php-ext-install mysql
-
 # Install the PHP mysqli extention
 RUN docker-php-ext-install mysqli
 
 # Install the PHP pdo_mysql extention
 RUN docker-php-ext-install pdo_mysql
-RUN docker-php-ext-install bcmath
-# Install the php memcache
-RUN pecl install memcache && \
-    docker-php-ext-enable memcache
-    
+
 # Install the PHP intl extention
 RUN pecl install intl && \
     docker-php-ext-enable intl
 
 # Install the PHP gd library
-RUN docker-php-ext-install gd && \
-    docker-php-ext-configure gd \
+RUN docker-php-ext-configure gd \
         --enable-gd-native-ttf \
         --with-jpeg-dir=/usr/lib \
         --with-freetype-dir=/usr/include/freetype2 && \
     docker-php-ext-install gd
-
-
 
 #--------------------------------------------------------------------------
 # Optional Software's Installation
@@ -73,10 +63,20 @@ RUN if [ ${INSTALL_ZIP_ARCHIVE} = true ]; then \
 ARG INSTALL_MEMCACHED=true
 RUN if [ ${INSTALL_MEMCACHED} = true ]; then \
     # Install the php memcached extension
-    pecl install memcached && \
-    docker-php-ext-enable memcached \
+    curl -L -o /tmp/memcached.tar.gz "https://github.com/php-memcached-dev/php-memcached/archive/php7.tar.gz" \
+    && mkdir -p memcached \
+    && tar -C memcached -zxvf /tmp/memcached.tar.gz --strip 1 \
+    && ( \
+        cd memcached \
+        && phpize \
+        && ./configure \
+        && make -j$(nproc) \
+        && make install \
+    ) \
+    && rm -r memcached \
+    && rm /tmp/memcached.tar.gz \
+    && docker-php-ext-enable memcached \
 ;fi
-
 
 # Opcache:
 ARG INSTALL_OPCACHE=true
@@ -85,20 +85,19 @@ RUN if [ ${INSTALL_OPCACHE} = true ]; then \
     docker-php-ext-enable opcache \
 ;fi
 
-
-
 #--------------------------------------------------------------------------
 # Final Touch
 #--------------------------------------------------------------------------
-ADD ZendGuardLoader.so /usr/local/ext/ZendGuardLoader.so
+
 ADD ./site.ini /usr/local/etc/php/conf.d
 ADD ./site.pool.conf /usr/local/etc/php-fpm.d/
 
 RUN rm -r /var/lib/apt/lists/*
 
 RUN usermod -u 1000 www-data
-WORKDIR /opt/htdocs
-VOLUME ["/Users/lxpfigo/htdocs"]
+
+WORKDIR /var/www
+
 CMD ["php-fpm"]
 
 EXPOSE 9000
